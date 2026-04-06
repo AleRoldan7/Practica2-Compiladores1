@@ -1,0 +1,107 @@
+<!-- arbol.html -->
+<div class="container-fluid p-3">
+  <div class="d-flex align-items-center gap-2 mb-3">
+    <button routerLink="../../editor/editor" class="btn btn-secondary">← Volver</button>
+    <h2 class="mb-0">Árbol de Derivación</h2>
+  </div>
+
+  <div class="row g-3">
+
+    <!-- Panel de entrada -->
+    <div class="col-md-4">
+      <div class="card">
+        <div class="card-header bg-primary text-white">Configuración</div>
+        <div class="card-body d-flex flex-column gap-3">
+
+          <div>
+            <label class="form-label">Analizador</label>
+            <select class="form-select" [(ngModel)]="analizadorSeleccionado">
+              <option value="">-- Seleccione --</option>
+              <option *ngFor="let a of analizadores" [value]="a">{{ a }}</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="form-label">Cadena de entrada</label>
+            <textarea class="form-control font-monospace" rows="5"
+              [(ngModel)]="cadenaEntrada"
+              placeholder="Tokens separados por espacios...">
+            </textarea>
+          </div>
+
+          <button class="btn btn-primary"
+            (click)="analizar()"
+            [disabled]="!analizadorSeleccionado || !cadenaEntrada.trim()">
+            Analizar cadena
+          </button>
+
+          <!-- Resultado -->
+          <div *ngIf="resultado">
+            <div class="alert"
+              [class.alert-success]="resultado.aceptada"
+              [class.alert-danger]="!resultado.aceptada">
+              {{ resultado.aceptada ? '✅ Cadena aceptada' : '❌ Cadena rechazada' }}
+            </div>
+            <ul *ngIf="resultado.errores.length > 0" class="list-group">
+              <li *ngFor="let e of resultado.errores"
+                class="list-group-item list-group-item-danger small">
+                {{ e }}
+              </li>
+            </ul>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- Panel del árbol SVG -->
+    <div class="col-md-8">
+      <div class="card">
+        <div class="card-header bg-success text-white">
+          Árbol de derivación
+        </div>
+        <div class="card-body" style="overflow: auto; background: #f8f9fa;">
+
+          <div *ngIf="!arbol" class="text-muted text-center p-5">
+            Ingresa una cadena válida para ver el árbol.
+          </div>
+
+          <svg *ngIf="arbol"
+            [attr.width]="svgWidth"
+            [attr.height]="svgHeight">
+
+            <!-- Líneas -->
+            <line *ngFor="let l of lineas"
+              [attr.x1]="l.x1" [attr.y1]="l.y1"
+              [attr.x2]="l.x2" [attr.y2]="l.y2"
+              stroke="#adb5bd" stroke-width="2"/>
+
+            <!-- Nodos -->
+            <g *ngFor="let n of nodos">
+              <circle
+                [attr.cx]="n.x" [attr.cy]="n.y" [attr.r]="radio"
+                [attr.fill]="n.esHoja ? '#198754' : '#0d6efd'"
+                stroke="white" stroke-width="2"/>
+              <text
+                [attr.x]="n.x" [attr.y]="n.y + 5"
+                text-anchor="middle" fill="white"
+                font-size="11" font-weight="bold">
+                {{ n.label.length > 8 ? n.label.slice(0,7) + '…' : n.label }}
+              </text>
+              <!-- Tooltip con nombre completo -->
+              <title>{{ n.label }}</title>
+            </g>
+
+          </svg>
+        </div>
+
+        <!-- Leyenda -->
+        <div class="card-footer d-flex gap-3 small">
+          <span><span style="color:#0d6efd">●</span> No terminal</span>
+          <span><span style="color:#198754">●</span> Terminal</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>

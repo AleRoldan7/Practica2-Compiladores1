@@ -1,0 +1,88 @@
+<div class="container">
+  <h1>Analizador Wison</h1>
+
+  <!-- Campo nombre del analizador -->
+  <div class="mb-2">
+    <input type="text" class="form-control" [(ngModel)]="nombreAnalizador"
+      placeholder="Nombre del analizador (ej: Mi Gramática)" />
+  </div>
+
+
+  <div class="editor-container">
+    <div class="lineas">
+      <div *ngFor="let linea of lineasArray; let i = index">{{ i + 1 }}</div>
+    </div>
+    <textarea [(ngModel)]="codigo" (input)="actualizarLineas()" (scroll)="sincronizarScroll($event)" spellcheck="false"
+      placeholder="Escribe el código Wison aquí"></textarea>
+  </div>
+
+  <!-- Botones -->
+  <div class="d-flex gap-2 mt-2">
+    <button class="btn btn-primary" (click)="analizar()">Analizar</button>
+    <button class="btn btn-secondary" (click)="limpiar()">Limpiar</button>
+    <button class="btn btn-success" [routerLink]="['/analizador']" [disabled]="!analizadorListo">
+      Ir al analizador LL →
+    </button>
+  </div>
+
+  <!-- Tablas de resultados -->
+  <div class="resultados">
+
+    <!-- Tokens -->
+    <div class="tabla tokens">
+      <h2>Tokens ({{ tokens.length }})</h2>
+      <table *ngIf="tokens.length > 0">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Lexema</th>
+            <th>Tipo</th>
+            <th>Línea</th>
+            <th>Columna</th>
+            <th>Descripción</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let t of tokens; let i = index">
+            <td>{{ i + 1 }}</td>
+            <td>{{ t.lexema }}</td>
+            <td>{{ t.type }}</td>
+            <td>{{ t.line }}</td>
+            <td>{{ t.column }}</td>
+            <td>{{ t.description }}</td>
+          </tr>
+        </tbody>
+      </table>
+      <p *ngIf="tokens.length === 0">No hay tokens</p>
+    </div>
+
+    <!-- Errores -->
+    <div class="tabla errores">
+      <h2>Errores ({{ errores.length }})</h2>
+      <table *ngIf="errores.length > 0">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Lexema</th>
+            <th>Tipo</th>
+            <th>Línea</th>
+            <th>Columna</th>
+            <th>Descripción</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let error of errores; let i = index">
+            <td>{{ i + 1 }}</td>
+            <td>{{ error.lexema }}</td>
+            <td>{{ error.type }}</td>
+            <td>{{ error.line }}</td>
+            <td>{{ error.column }}</td>
+            <td>{{ error.description }}</td>
+          </tr>
+        </tbody>
+      </table>
+      <p *ngIf="errores.length === 0">No hay errores</p>
+    </div>
+
+  </div>
+</div>

@@ -1,0 +1,75 @@
+<div class="container-fluid p-3">
+    <div class="row g-3">
+
+        <!-- Panel izquierdo: selección y entrada -->
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-header bg-primary text-white">
+                    <strong>Analizador LL</strong>
+                </div>
+                <div class="card-body d-flex flex-column gap-3">
+
+                    <!-- Selector de analizador -->
+                    <div>
+                        <label class="form-label">Seleccionar analizador</label>
+                        <select class="form-select" [(ngModel)]="analizadorSeleccionado">
+                            <option value="">-- Seleccione --</option>
+                            <option *ngFor="let a of servicio.analizadores" [value]="a.nombre">
+                                {{ a.nombre }}
+                            </option>
+                        </select>
+                    </div>
+
+                    <!-- Cadena de entrada -->
+                    <div>
+                        <label class="form-label">Cadena de entrada</label>
+                        <textarea class="form-control font-monospace" rows="4" [(ngModel)]="cadenaEntrada"
+                            placeholder="Ingrese tokens separados por espacios..."></textarea>
+                        <small class="text-muted">
+                            Ejemplo: <code>$_P_Ab $_Una_A $_Mas $_Una_A $_P_Ce $_FIN</code>
+                        </small>
+                    </div>
+
+                    <button class="btn btn-primary" (click)="analizar()"
+                        [disabled]="!analizadorSeleccionado || !cadenaEntrada.trim()">
+                        Analizar cadena
+                    </button>
+
+                    <!-- Resultado -->
+                    <div *ngIf="resultado !== null">
+                        <div class="alert" [class.alert-success]="resultado.aceptada"
+                            [class.alert-danger]="!resultado.aceptada">
+                            <strong>{{ resultado.aceptada ? '✅ Cadena aceptada' : '❌ Cadena rechazada' }}</strong>
+                        </div>
+
+                        <!-- Errores de la cadena -->
+                        <div *ngIf="resultado.errores.length > 0">
+                            <p class="fw-bold mb-1">Errores:</p>
+                            <ul class="list-group">
+                                <li class="list-group-item list-group-item-danger small"
+                                    *ngFor="let e of resultado.errores">
+                                    {{ e }}
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+        <!-- Panel derecho: árbol -->
+        <!-- Panel derecho: árbol -->
+        <div class="col-md-8">
+            <div class="card h-100">
+                <div class="card-header bg-success text-white">
+                    <strong>Árbol de derivación</strong>
+                </div>
+                <div class="card-body">
+                    <app-arbol [raiz]="arbol"></app-arbol> <!-- ✅ pasar el input -->
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
