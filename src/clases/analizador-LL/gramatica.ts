@@ -1,6 +1,6 @@
 export interface Produccion {
     cabeza: string;
-    cuerpo: string[];
+    cuerpo: string[];  // [] significa producción épsilon
 }
 
 export class Gramatica {
@@ -9,6 +9,9 @@ export class Gramatica {
     noTerminales:   Set<string> = new Set();
     producciones:   Produccion[] = [];
     simboloInicial: string = '';
+
+    // Símbolo especial para épsilon — NO es un terminal real
+    static readonly EPSILON = 'ε';
 
     static desdeAST(ast: any): Gramatica {
         const g = new Gramatica();
@@ -27,16 +30,14 @@ export class Gramatica {
 
         for (const prod of (ast.syntax?.producciones || [])) {
             if (!prod) continue;
-            g.extraerProducciones(prod);  
+            g.extraerProducciones(prod);
         }
 
         return g;
     }
 
     private extraerProducciones(prod: any) {
-        const cabeza = prod.cabeza;
-        const cuerpo = prod.cuerpo;
-        this.extraerAlternativas(cabeza, cuerpo);
+        this.extraerAlternativas(prod.cabeza, prod.cuerpo);
     }
 
     private extraerAlternativas(cabeza: string, nodo: any) {
@@ -47,8 +48,20 @@ export class Gramatica {
                 this.extraerAlternativas(cabeza, opcion);
             }
         } else if (nodo.tipo === 'Secuencia') {
-            const cuerpo = nodo.simbolos.map((s: any) => s.nombre);
-            this.producciones.push({ cabeza, cuerpo });
+            const simbolos: string[] = nodo.simbolos.map((s: any) => s.nombre);
+
+            // ✅ Si el único símbolo es $_EPSILON (o 'ε'), cuerpo vacío
+            const esEpsilon =
+                simbolos.length === 0 ||
+                (simbolos.length === 1 &&
+                    (simbolos[0] === '$_EPSILON' ||
+                     simbolos[0] === 'ε'         ||
+                     simbolos[0] === Gramatica.EPSILON));
+
+            this.producciones.push({
+                cabeza,
+                cuerpo: esEpsilon ? [] : simbolos
+            });
         }
     }
 
