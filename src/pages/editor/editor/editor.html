@@ -12,8 +12,8 @@
       <input type="file" class="form-control" accept=".wison,.txt" (change)="cargarArchivo($event)" />
     </div>
     <div class="col-md-3 d-flex gap-2">
-      <button class="btn btn-primary flex-fill" (click)="analizar()">▶ Analizar</button>
-      <button class="btn btn-outline-secondary" (click)="limpiar()">✕ Limpiar</button>
+      <button class="btn btn-primary flex-fill" (click)="analizar()">Analizar</button>
+      <button class="btn btn-danger" (click)="limpiar()">✕ Limpiar</button>
     </div>
   </div>
 
@@ -28,9 +28,9 @@
 
   <!-- ── Botón ir al analizador ── -->
   <div class="mb-3">
-    <button class="btn btn-success" [routerLink]="['/arbol']"
+    <button class="btn btn-success" [routerLink]="['/analizador']"
       [disabled]="!analizadorListo && wisonService.analizadores.length === 0">
-      Ir al Analizador LL →
+      Ir al Analizador LL 
     </button>
 
   </div>
@@ -38,8 +38,7 @@
   <!-- ── Analizadores guardados ── -->
   <div class="card mb-3" *ngIf="wisonService.analizadores.length > 0">
     <div class="card-header bg-dark text-white d-flex align-items-center justify-content-between">
-      <strong>💾 Analizadores guardados ({{ wisonService.analizadores.length }})</strong>
-      <small class="text-white-50">Persisten aunque cierres la app</small>
+      <strong>Analizadores guardados ({{ wisonService.analizadores.length }})</strong>
     </div>
     <div class="card-body p-2">
       <div class="table-responsive">
@@ -60,7 +59,7 @@
               <td>{{ a.gramatica?.noTerminales?.size ?? '–' }}</td>
               <td>{{ a.gramatica?.producciones?.length ?? '–' }}</td>
               <td class="d-flex gap-1">
-                <button class="btn btn-sm btn-outline-danger" (click)="eliminarAnalizador(a.nombre)">🗑
+                <button class="btn btn-sm btn-outline-danger" (click)="eliminarAnalizador(a.nombre)">
                   Eliminar</button>
               </td>
             </tr>
@@ -138,7 +137,7 @@
             </tbody>
           </table>
           <p class="text-success p-3 mb-0 fw-semibold" *ngIf="errores.length === 0">
-            ✅ Sin errores
+            Sin errores
           </p>
         </div>
       </div>

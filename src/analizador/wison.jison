@@ -36,7 +36,6 @@
 "*"                   return 'KLEENE';
 "¿"                   return 'APERTURA';
 
-/* ✅ ?Wison antes que ? solo */
 "?Wison"              return 'CIERRE_WISON';
 "?"                   return 'OPCIONAL';
 
@@ -410,11 +409,25 @@ produccion
 cuerpo_produccion
     : cuerpo_produccion OR lista_simbolos
     {
-        $$ = { tipo: 'Alternativa', opciones: [...($1.tipo === 'Alternativa' ? $1.opciones : [$1]), $3] };
+        $$ = {
+            tipo:'Alternativa',
+            opciones:[
+                ...($1.tipo==='Alternativa' ? $1.opciones : [$1]),
+                $3
+            ]
+        };
     }
     | lista_simbolos
     {
         $$ = $1;
+    }
+    | /* ε */
+    {
+        $$ = {
+            tipo:'Secuencia',
+            simbolos:[],
+            epsilon:true
+        };
     }
     ;
 

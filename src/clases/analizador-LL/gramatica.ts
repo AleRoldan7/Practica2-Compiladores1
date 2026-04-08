@@ -50,7 +50,6 @@ export class Gramatica {
         } else if (nodo.tipo === 'Secuencia') {
             const simbolos: string[] = nodo.simbolos.map((s: any) => s.nombre);
 
-            // ✅ Si el único símbolo es $_EPSILON (o 'ε'), cuerpo vacío
             const esEpsilon =
                 simbolos.length === 0 ||
                 (simbolos.length === 1 &&

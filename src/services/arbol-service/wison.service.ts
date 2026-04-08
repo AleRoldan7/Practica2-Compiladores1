@@ -5,19 +5,19 @@ import { ConjuntoFirst } from '../../clases/analizador-LL/conjunto-first';
 import { ConjuntoFollow } from '../../clases/analizador-LL/conjunto-follow';
 import { TablaLL } from '../../clases/analizador-LL/tablaLL';
 import { AnalizadorLL } from '../../clases/analizador-LL/analizador-ll';
+import { LexerWison } from '../../clases/analizador-LL/lexer-wison';
 import { ManejoErrores } from '../../clases/manejo-errores/errores';
 
-// ─── Clave en localStorage ────────────────────────────────────────────────────
 const LS_KEY = 'wison_analizadores';
 
 export interface AnalizadorGuardado {
-  nombre: string;
+  nombre:   string;
   gramatica: Gramatica;
-  first: ConjuntoFirst;
-  follow: ConjuntoFollow;
-  tabla: TablaLL;
-  /** AST original, se persiste para poder reconstruir al recargar */
-  ast: any;
+  first:    ConjuntoFirst;
+  follow:   ConjuntoFollow;
+  tabla:    TablaLL;
+  lexer:    LexerWison;   // ✅ lexer para texto real
+  ast:      any;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -25,74 +25,78 @@ export class WisonService {
 
   analizadores: AnalizadorGuardado[] = [];
   manejador = new ManejoErrores();
-  ultimoAST: any = null;
-  ultimoNombre: string = '';
 
-  constructor() {
-    this._cargarDesdeStorage();
-  }
+  constructor() { this._cargarDesdeStorage(); }
 
-  // ─── Construcción desde AST ───────────────────────────────────────────────
+  // ── Construcción desde AST ─────────────────────────────────────────────────
   construirDesdeAST(ast: any, nombre: string): string[] {
-    this.ultimoAST    = ast;
-    this.ultimoNombre = nombre;
     const errores: string[] = [];
 
     const g      = Gramatica.desdeAST(ast);
     const first  = new ConjuntoFirst(g);
     const follow = new ConjuntoFollow(g, first);
     const tabla  = new TablaLL(g, first, follow);
+    const lexer  = new LexerWison(ast);   // ✅ construir lexer desde el mismo AST
 
     if (!tabla.esLL1) {
       errores.push(...tabla.colisiones);
       return errores;
     }
 
-    const entrada: AnalizadorGuardado = { nombre, gramatica: g, first, follow, tabla, ast };
+    const entrada: AnalizadorGuardado = { nombre, gramatica: g, first, follow, tabla, lexer, ast };
     const idx = this.analizadores.findIndex(a => a.nombre === nombre);
-    if (idx >= 0) {
-      this.analizadores[idx] = entrada;
-    } else {
-      this.analizadores.push(entrada);
-    }
+    if (idx >= 0) this.analizadores[idx] = entrada;
+    else          this.analizadores.push(entrada);
 
     this._guardarEnStorage();
     return errores;
   }
 
-  // ─── Análisis de cadena ───────────────────────────────────────────────────
+  // ── Analizar cadena de TOKENS (modo anterior: "$_ID $_Mas $_ID") ───────────
   analizarCadena(nombreAnalizador: string, tokens: string[]) {
     const a = this.analizadores.find(x => x.nombre === nombreAnalizador);
-    if (!a) {
-      console.error('Analizador no encontrado:', nombreAnalizador);
-      return null;
-    }
+    if (!a) { console.error('Analizador no encontrado:', nombreAnalizador); return null; }
     const ll = new AnalizadorLL(a.gramatica, a.tabla);
     return ll.analizar(tokens);
   }
 
-  // ─── Eliminar analizador ──────────────────────────────────────────────────
+  // ── Analizar texto real ("variable + variable") ────────────────────────────
+  analizarTexto(nombreAnalizador: string, texto: string) {
+    const a = this.analizadores.find(x => x.nombre === nombreAnalizador);
+    if (!a) { console.error('Analizador no encontrado:', nombreAnalizador); return null; }
+
+    // 1. Lexer: texto → tokens
+    const { tokens, errores: erroresLex } = a.lexer.tokenizar(texto);
+
+    if (erroresLex.length > 0) {
+      return {
+        aceptada: false,
+        arbol:    null,
+        errores:  erroresLex,
+        tokens
+      };
+    }
+
+    // 2. Parser LL: tokens → árbol
+    const nombresTokens = tokens.map(t => t.nombre);
+    const ll = new AnalizadorLL(a.gramatica, a.tabla);
+    const res = ll.analizar(nombresTokens);
+
+    return { ...res, tokens };
+  }
+
+  // ── Eliminar ───────────────────────────────────────────────────────────────
   eliminar(nombre: string): void {
     this.analizadores = this.analizadores.filter(a => a.nombre !== nombre);
     this._guardarEnStorage();
   }
 
-  // ─── Persistencia ─────────────────────────────────────────────────────────
-
-  /**
-   * Guarda sólo los ASTs (son objetos planos serializables).
-   * Al recuperarlos los reconstruye con Gramatica.desdeAST → first/follow/tabla.
-   */
+  // ── Persistencia ───────────────────────────────────────────────────────────
   private _guardarEnStorage(): void {
     try {
-      const payload = this.analizadores.map(a => ({
-        nombre: a.nombre,
-        ast:    a.ast
-      }));
+      const payload = this.analizadores.map(a => ({ nombre: a.nombre, ast: a.ast }));
       localStorage.setItem(LS_KEY, JSON.stringify(payload));
-    } catch (e) {
-      console.warn('No se pudo guardar en localStorage:', e);
-    }
+    } catch (e) { console.warn('localStorage error:', e); }
   }
 
   private _cargarDesdeStorage(): void {
@@ -100,23 +104,16 @@ export class WisonService {
       const raw = localStorage.getItem(LS_KEY);
       if (!raw) return;
       const payload: { nombre: string; ast: any }[] = JSON.parse(raw);
-
       for (const { nombre, ast } of payload) {
         try {
           const g      = Gramatica.desdeAST(ast);
           const first  = new ConjuntoFirst(g);
           const follow = new ConjuntoFollow(g, first);
           const tabla  = new TablaLL(g, first, follow);
-
-          if (tabla.esLL1) {
-            this.analizadores.push({ nombre, gramatica: g, first, follow, tabla, ast });
-          }
-        } catch (e) {
-          console.warn(`No se pudo reconstruir "${nombre}":`, e);
-        }
+          const lexer  = new LexerWison(ast);
+          if (tabla.esLL1) this.analizadores.push({ nombre, gramatica: g, first, follow, tabla, lexer, ast });
+        } catch (e) { console.warn(`No se pudo reconstruir "${nombre}":`, e); }
       }
-    } catch (e) {
-      console.warn('Error al leer localStorage:', e);
-    }
+    } catch (e) { console.warn('Error al leer localStorage:', e); }
   }
 }

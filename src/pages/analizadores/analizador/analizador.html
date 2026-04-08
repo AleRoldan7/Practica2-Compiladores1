@@ -4,8 +4,12 @@
     <!-- Panel izquierdo -->
     <div class="col-md-4">
       <div class="card shadow-sm h-100">
-        <div class="card-header bg-primary text-white fw-semibold">
-          🔍 Analizador LL
+        <div class="card-header bg-primary text-white fw-semibold d-flex justify-content-between align-items-center">
+          <span>Analizador LL</span>
+
+          <button [routerLink]="['/editor']" class="btn btn-light btn-sm fw-semibold">
+            Volver
+          </button>
         </div>
         <div class="card-body d-flex flex-column gap-3">
 
@@ -18,46 +22,74 @@
                 {{ a.nombre }}
               </option>
             </select>
-            <small class="text-muted" *ngIf="servicio.analizadores.length === 0">
-              ⚠ No hay analizadores creados. Ve al
-              <a routerLink="/editor">Editor</a> primero.
-            </small>
           </div>
 
-          <!-- Cadena de entrada -->
+          <!-- Toggle modo -->
           <div>
-            <label class="form-label fw-semibold">Cadena de entrada</label>
-            <textarea class="form-control font-monospace" rows="5"
-              [(ngModel)]="cadenaEntrada"
-              placeholder="Tokens separados por espacios…"></textarea>
+            <label class="form-label fw-semibold d-block">Modo de entrada</label>
+            <div class="btn-group w-100" role="group">
+              <button class="btn btn-sm" [class.btn-primary]="modoTexto" [class.btn-outline-primary]="!modoTexto"
+                (click)="modoTexto = true; cadenaEntrada = ''">
+                Texto real
+              </button>
+              <button class="btn btn-sm" [class.btn-primary]="!modoTexto" [class.btn-outline-primary]="modoTexto"
+                (click)="modoTexto = false; cadenaEntrada = ''">
+                Tokens manuales
+              </button>
+            </div>
+          </div>
+
+          <!-- Entrada -->
+          <div>
+            <label class="form-label fw-semibold">
+              {{ modoTexto ? 'Texto de entrada' : 'Tokens de entrada' }}
+            </label>
+            <textarea class="form-control font-monospace" rows="4" [(ngModel)]="cadenaEntrada"
+              [placeholder]="modoTexto ? 'Ej: variable + variable' : 'Ej: $_ID $_Mas $_ID'">
+            </textarea>
             <small class="text-muted">
-              Ej: <code>$_P_Ab $_Una_A $_Mas $_Una_A $_P_Ce $_FIN</code>
+              <span *ngIf="modoTexto">El lexer convierte el texto en tokens automáticamente.</span>
+              <span *ngIf="!modoTexto">Escribe nombres de tokens separados por espacios.</span>
             </small>
           </div>
 
-          <button class="btn btn-primary fw-semibold"
-            (click)="analizar()"
+          <button class="btn btn-primary fw-semibold" (click)="analizar()"
             [disabled]="!analizadorSeleccionado || !cadenaEntrada.trim()">
-            ▶ Analizar cadena
+            Analizar
           </button>
 
           <!-- Resultado -->
           <div *ngIf="resultado !== null">
-            <div class="alert fw-semibold py-2"
-              [class.alert-success]="resultado.aceptada"
+            <div class="alert fw-semibold py-2" [class.alert-success]="resultado.aceptada"
               [class.alert-danger]="!resultado.aceptada">
               {{ resultado.aceptada ? '✅ Cadena aceptada' : '❌ Cadena rechazada' }}
             </div>
+            <ul *ngIf="resultado.errores.length > 0" class="list-group">
+              <li class="list-group-item list-group-item-danger small" *ngFor="let e of resultado.errores">
+                ⚠ {{ e }}
+              </li>
+            </ul>
+          </div>
 
-            <div *ngIf="resultado.errores.length > 0">
-              <p class="fw-semibold mb-1 small">Detalles del error:</p>
-              <ul class="list-group">
-                <li class="list-group-item list-group-item-danger small"
-                  *ngFor="let e of resultado.errores">
-                  ⚠ {{ e }}
-                </li>
-              </ul>
-            </div>
+          <!-- Tabla de tokens del lexer -->
+          <div *ngIf="modoTexto && tokensLexer.length > 0">
+            <p class="fw-semibold mb-1 small">Tokens reconocidos por el lexer:</p>
+            <table class="table table-sm table-bordered mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th>#</th>
+                  <th>Valor</th>
+                  <th>Token</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let t of tokensLexer; let i = index">
+                  <td>{{ i+1 }}</td>
+                  <td><code>{{ t.valor }}</code></td>
+                  <td><span class="badge bg-primary">{{ t.nombre }}</span></td>
+                </tr>
+              </tbody>
+            </table>
           </div>
 
         </div>
@@ -68,9 +100,9 @@
     <div class="col-md-8">
       <div class="card shadow-sm h-100">
         <div class="card-header bg-success text-white fw-semibold">
-          🌳 Árbol de derivación
+          Árbol de derivación
         </div>
-        <div class="card-body" style="overflow:auto; background:#f0f4f8; min-height:400px;">
+        <div class="card-body" style="overflow:auto; background:#f8f9fa; min-height:400px;">
           <app-arbol [raiz]="arbol"></app-arbol>
         </div>
       </div>

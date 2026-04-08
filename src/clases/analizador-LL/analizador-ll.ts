@@ -58,7 +58,7 @@ export class AnalizadorLL {
         if (prod) {
           pila.pop();
 
-          // ✅ Producción épsilon: cuerpo vacío → agregar nodo ε visual
+          // Producción épsilon: cuerpo vacío → agregar nodo ε visual
           if (prod.cuerpo.length === 0) {
             const nodoEps = new NodoArbol(this.EPSILON, true);
             tope.nodo.agregarHijo(nodoEps);

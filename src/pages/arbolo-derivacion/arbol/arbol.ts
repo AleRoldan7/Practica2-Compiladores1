@@ -1,9 +1,9 @@
 import { Component, Input, OnChanges, OnInit } from '@angular/core';
-import { CommonModule }  from '@angular/common';
-import { FormsModule }   from '@angular/forms';
-import { RouterLink }    from '@angular/router';
-import { WisonService }  from '../../../services/arbol-service/wison.service';
-import { NodoArbol }     from '../../../clases/analizador-LL/nodo-arbol';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
+import { WisonService } from '../../../services/arbol-service/wison.service';
+import { NodoArbol } from '../../../clases/analizador-LL/nodo-arbol';
 
 @Component({
   selector: 'app-arbol',
@@ -14,24 +14,23 @@ import { NodoArbol }     from '../../../clases/analizador-LL/nodo-arbol';
 })
 export class Arbol implements OnInit, OnChanges {
 
-  // ✅ Acepta el árbol desde el padre
   @Input() raiz: NodoArbol | null = null;
 
-  analizadores:          string[] = [];
+  analizadores: string[] = [];
   analizadorSeleccionado = '';
-  cadenaEntrada          = '';
+  cadenaEntrada = '';
   resultado: { aceptada: boolean; errores: string[] } | null = null;
-  arbol:     NodoArbol | null = null;
+  arbol: NodoArbol | null = null;
 
-  nodos:     NodoVisual[] = [];
-  lineas:    LineaVisual[] = [];
-  svgWidth  = 800;
+  nodos: NodoVisual[] = [];
+  lineas: LineaVisual[] = [];
+  svgWidth = 800;
   svgHeight = 400;
-  readonly radio       = 24;
+  readonly radio = 24;
   readonly nivelAltura = 90;
-  readonly minSepX     = 65;
+  readonly minSepX = 65;
 
-  constructor(private wisonService: WisonService) {}
+  constructor(private wisonService: WisonService) { }
 
   ngOnInit() {
     this.analizadores = this.wisonService.analizadores.map(a => a.nombre);
@@ -40,34 +39,33 @@ export class Arbol implements OnInit, OnChanges {
     }
   }
 
-  // ✅ Cuando cambia el @Input raiz, recalcular el árbol
   ngOnChanges() {
     if (this.raiz) {
       this.arbol = this.raiz;
       this.calcularLayout();
     } else {
-      this.nodos  = [];
+      this.nodos = [];
       this.lineas = [];
     }
   }
 
   analizar() {
     const tokens = this.cadenaEntrada.trim().split(/\s+/).filter(t => t.length > 0);
-    const res    = this.wisonService.analizarCadena(this.analizadorSeleccionado, tokens);
+    const res = this.wisonService.analizarCadena(this.analizadorSeleccionado, tokens);
     if (!res) return;
 
     this.resultado = { aceptada: res.aceptada, errores: res.errores };
-    this.arbol     = res.arbol;
+    this.arbol = res.arbol;
     if (this.arbol) this.calcularLayout();
   }
 
   calcularLayout() {
-    this.nodos  = [];
+    this.nodos = [];
     this.lineas = [];
     this.calcularAncho(this.arbol!);
     const totalAncho = (this.arbol as any)._ancho * this.minSepX;
-    this.svgWidth    = Math.max(800, totalAncho + 100);
-    this.svgHeight   = (this.profundidad(this.arbol!) + 1) * this.nivelAltura + 60;
+    this.svgWidth = Math.max(800, totalAncho + 100);
+    this.svgHeight = (this.profundidad(this.arbol!) + 1) * this.nivelAltura + 60;
     this.asignarPos(this.arbol!, this.svgWidth / 2, 50, null);
   }
 
@@ -98,6 +96,8 @@ export class Arbol implements OnInit, OnChanges {
     if (!nodo.hijos.length) return 0;
     return 1 + Math.max(...nodo.hijos.map(h => this.profundidad(h)));
   }
+
+  
 }
 
 interface NodoVisual { x: number; y: number; label: string; esHoja: boolean; }
