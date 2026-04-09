@@ -157,7 +157,7 @@ export class LexerWison {
     return { tokens, errores };
   }
 
-  // ── Construcción de regex desde el AST de expresión regular 
+  //Construcción de regex desde el AST de expresión regular 
 
   private _construirRegex(nodo: any): string {
     if (!nodo) return '';
