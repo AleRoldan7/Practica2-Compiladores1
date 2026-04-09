@@ -1073,21 +1073,25 @@ case 25:return 27;
 break;
 case 26:return 26;
 break;
-case 27:return 5;
+case 27:return 'PUNTO';    
 break;
-case 28:return 10;
+case 28:return 'GUION';     
 break;
-case 29:return 11;
+case 29:return 5;
 break;
-case 30:return 28;
+case 30:return 10;
 break;
-case 31:return 18;
+case 31:return 11;
 break;
-case 32:return 43;
+case 32:return 28;
 break;
-case 33:return 9;
+case 33:return 18;
 break;
-case 34:
+case 34:return 43;
+break;
+case 35:return 9;
+break;
+case 36:
     yy.manejador.errorLexico(
         yy_.yytext,
         yy_.yylloc.first_line,
@@ -1097,8 +1101,8 @@ case 34:
 break;
 }
 },
-rules: [/^(?:\s+)/i,/^(?:#.*)/i,/^(?:[/][*][*]([^*]|[*]+[^*/])*[*]+[/])/i,/^(?:\[0-9\])/i,/^(?:\[a-z\])/i,/^(?:\[A-Z\])/i,/^(?:\[aA-zZ\])/i,/^(?:Wison\b)/i,/^(?:Lex\b)/i,/^(?:Terminal\b)/i,/^(?:No_Terminal\b)/i,/^(?:Syntax\b)/i,/^(?:Initial_Sim\b)/i,/^(?:<=)/i,/^(?:<-)/i,/^(?:\{\{:)/i,/^(?::\}\})/i,/^(?:\{:)/i,/^(?::\})/i,/^(?:\()/i,/^(?:\))/i,/^(?:\[)/i,/^(?:\])/i,/^(?:;)/i,/^(?:\|)/i,/^(?:\+)/i,/^(?:\*)/i,/^(?:¿)/i,/^(?:\?Wison\b)/i,/^(?:\?)/i,/^(?:[']([^'])*['])/i,/^(?:\$_[a-zA-Z0-9_]+)/i,/^(?:%_[a-zA-Z0-9_]+)/i,/^(?:$)/i,/^(?:.)/i],
-conditions: {"INITIAL":{"rules":[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34],"inclusive":true}}
+rules: [/^(?:\s+)/i,/^(?:#.*)/i,/^(?:[/][*][*]([^*]|[*]+[^*/])*[*]+[/])/i,/^(?:\[0-9\])/i,/^(?:\[a-z\])/i,/^(?:\[A-Z\])/i,/^(?:\[aA-zZ\])/i,/^(?:Wison\b)/i,/^(?:Lex\b)/i,/^(?:Terminal\b)/i,/^(?:No_Terminal\b)/i,/^(?:Syntax\b)/i,/^(?:Initial_Sim\b)/i,/^(?:<=)/i,/^(?:<-)/i,/^(?:\{\{:)/i,/^(?::\}\})/i,/^(?:\{:)/i,/^(?::\})/i,/^(?:\()/i,/^(?:\))/i,/^(?:\[)/i,/^(?:\])/i,/^(?:;)/i,/^(?:\|)/i,/^(?:\+)/i,/^(?:\*)/i,/^(?:\.)/i,/^(?:-)/i,/^(?:¿)/i,/^(?:\?Wison\b)/i,/^(?:\?)/i,/^(?:[']([^'])*['])/i,/^(?:\$_[a-zA-Z0-9_]+)/i,/^(?:%_[a-zA-Z0-9_]+)/i,/^(?:$)/i,/^(?:.)/i],
+conditions: {"INITIAL":{"rules":[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36],"inclusive":true}}
 });
 return lexer;
 })();

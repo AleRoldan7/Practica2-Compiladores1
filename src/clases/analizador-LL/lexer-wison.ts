@@ -12,22 +12,18 @@ export class LexerWison {
 
     const terminales: any[] = ast?.lex?.terminales ?? [];
 
-    //guarda todos los terminales en un mapa
     for (const t of terminales) {
       this.mapaTerminales.set(t.nombre, t.expresion);
     }
 
-    //detectar macros usadas dentro de otros macros
     const usados = new Set<string>();
 
     for (const t of terminales) {
       this.buscarReferencias(t.expresion, usados);
     }
 
-    // generar ER SOLO para los tokens finales
     for (const t of terminales) {
 
-      // si este terminal es usado dentro de otro es una macro
       if (usados.has(t.nombre)) continue;
 
       const patron = this.construirERExpandida(t.expresion);
@@ -36,7 +32,13 @@ export class LexerWison {
         nombre: t.nombre,
         regex: new RegExp('^(?:' + patron + ')')
       });
+
     }
+
+    // PRIORIDAD a tokens más largos (IP antes que Numero)
+    this.reglas.sort(
+      (a, b) => b.regex.source.length - a.regex.source.length
+    );
   }
 
   private buscarReferencias(nodo: any, usados: Set<string>) {

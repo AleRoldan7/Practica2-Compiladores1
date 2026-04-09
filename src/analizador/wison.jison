@@ -34,6 +34,8 @@
 "|"                   return 'OR';
 "+"                   return 'MAS';
 "*"                   return 'KLEENE';
+"."                   return 'PUNTO';    
+"-"                   return 'GUION';     
 "¿"                   return 'APERTURA';
 
 "?Wison"              return 'CIERRE_WISON';
