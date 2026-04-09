@@ -5,13 +5,11 @@
   <div class="row g-2 mb-2 align-items-end">
     <div class="col-md-5">
       <label class="form-label fw-semibold mb-1">Nombre del analizador</label>
-      <input type="text" class="form-control" [(ngModel)]="nombreAnalizador"
-        placeholder="Ej: GramáticaExpresiones" />
+      <input type="text" class="form-control" [(ngModel)]="nombreAnalizador" placeholder="Ej: GramáticaExpresiones" />
     </div>
     <div class="col-md-4">
       <label class="form-label fw-semibold mb-1">Cargar archivo .wison</label>
-      <input type="file" class="form-control" accept=".wison,.txt"
-        (change)="cargarArchivo($event)" />
+      <input type="file" class="form-control" accept=".wison,.txt" (change)="cargarArchivo($event)" />
     </div>
     <div class="col-md-3 d-flex gap-2">
       <button class="btn btn-primary flex-fill" (click)="analizar()">Analizar</button>
@@ -24,30 +22,25 @@
     <div class="lineas">
       <div *ngFor="let linea of lineasArray; let i = index">{{ i + 1 }}</div>
     </div>
-    <textarea [(ngModel)]="codigo"
-      (input)="actualizarLineas()"
-      (scroll)="sincronizarScroll($event)"
-      spellcheck="false"
+    <textarea [(ngModel)]="codigo" (input)="actualizarLineas()" (scroll)="sincronizarScroll($event)" spellcheck="false"
       placeholder="Escribe o carga código Wison aquí…"></textarea>
   </div>
 
   <!-- ── Botón ir al analizador ── -->
   <div class="d-flex gap-2 mb-3">
-    <button class="btn btn-success"
-      [routerLink]="['/analizador']"
+    <button class="btn btn-success" [routerLink]="['/analizador']"
       [disabled]="!analizadorListo && wisonService.analizadores.length === 0">
       Ir al Analizador LL →
     </button>
   </div>
 
-  
+
   <div *ngIf="infoGenerada" class="row g-3 mb-3">
 
     <!-- Analizador Léxico generado -->
     <div class="col-md-6">
       <div class="card border-0 shadow-sm h-100">
-        <div class="card-header text-white fw-semibold"
-          style="background:#0d6fbc;">
+        <div class="card-header text-white fw-semibold" style="background:#0d6fbc;">
           Analizador Léxico generado
           <span class="badge bg-light text-dark ms-2">
             {{ infoGenerada.terminales.length }} terminales
@@ -86,8 +79,7 @@
     <!-- Analizador Sintáctico generado -->
     <div class="col-md-6">
       <div class="card border-0 shadow-sm h-100">
-        <div class="card-header text-white fw-semibold"
-          style="background:#198754;">
+        <div class="card-header text-white fw-semibold" style="background:#198754;">
           Analizador Sintáctico generado
           <span class="badge bg-light text-dark ms-2">
             {{ infoGenerada.producciones.length }} producciones
@@ -118,7 +110,7 @@
           </table>
         </div>
         <div class="card-footer small text-muted">
-          Tabla LL(1) construida correctamente 
+          Tabla LL(1) construida correctamente
         </div>
       </div>
     </div>
@@ -151,8 +143,7 @@
               <td>{{ a.gramatica?.noTerminales?.size ?? '–' }}</td>
               <td>{{ a.gramatica?.producciones?.length ?? '–' }}</td>
               <td>
-                <button class="btn btn-sm btn-danger"
-                  (click)="eliminarAnalizador(a.nombre)">Eliminar</button>
+                <button class="btn btn-sm btn-danger" (click)="eliminarAnalizador(a.nombre)">Eliminar</button>
               </td>
             </tr>
           </tbody>
@@ -189,8 +180,7 @@
               </code>
             </td>
             <td>
-              <span class="badge"
-                [style.background]="t.type === 'NO_TERMINAL'    ? '#6f42c1' :
+              <span class="badge" [style.background]="t.type === 'NO_TERMINAL'    ? '#6f42c1' :
                                     t.type === 'TERMINAL'        ? '#0d6efd' :
                                     t.type === 'SIMBOLO_INICIAL' ? '#198754' :
                                     t.type === 'PRODUCCION'      ? '#fd7e14' : '#6c757d'">
@@ -237,18 +227,22 @@
       <table class="table table-sm mb-0">
         <thead class="table-light sticky-top">
           <tr>
-            <th>#</th><th>Tipo</th><th>Descripción</th>
+            <th>#</th>
+            <th>Tipo</th>
+            <th>Línea</th>
+            <th>Col</th>
+            <th>Producciones</th>
+            <th>Descripción</th>
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let e of errores; let i = index"
-            [class.table-warning]="e.type === 'SEMANTICO'"
-            [class.table-danger]="e.type === 'SINTACTICO'"
-            [class.table-info]="e.type === 'LEXICO'">
+          <tr *ngFor="let e of errores; let i = index" [class.table-warning]="e.type === 'SEMANTICO'"
+            [class.table-danger]="e.type === 'SINTACTICO'" [class.table-info]="e.type === 'LEXICO'">
             <td>{{ i + 1 }}</td>
+            <td>{{ e.line }}</td>
+            <td>{{ e.column }}</td>
             <td>
-              <span class="badge"
-                [style.background]="e.type === 'SEMANTICO'  ? '#fd7e14' :
+              <span class="badge" [style.background]="e.type === 'SEMANTICO'  ? '#fd7e14' :
                                     e.type === 'SINTACTICO'  ? '#dc3545' :
                                     e.type === 'LEXICO'      ? '#ffc107' : '#6c757d'"
                 [style.color]="e.type === 'LEXICO' ? '#000' : '#fff'">
