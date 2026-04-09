@@ -61,7 +61,7 @@
 %%
 
 inicio
-    : WISON APERTURA bloque_lex bloque_syntax CIERRE_WISON EOF
+    : WISON APERTURA bloque_lex bloque_syntax cierre_wison EOF
     {
         $$ = {
             tipo: 'Wison',
@@ -79,9 +79,10 @@ inicio
     | error EOF
     {
         yy.manejador.errorEstructuraWison(
-            yytext,
+            '',
             @1.first_line,
-            @1.first_column + 1
+            @1.first_column,
+            "Falta cerrar el archivo con ?Wison"
         );
 
         return {
@@ -92,7 +93,18 @@ inicio
     }
     ;
 
-/* ─────────────── BLOQUE LEX ─────────────── */
+cierre_wison
+    : CIERRE_WISON
+    {
+        $$ = '?Wison';
+    }
+    | OPCIONAL WISON
+    {
+        $$ = '? Wison';
+    }
+    ;
+
+/*  BLOQUE LEX  */
 
 bloque_lex
     : LEX BLOQUE_ABRE lista_terminales BLOQUE_CIERRA
@@ -166,7 +178,7 @@ declaracion_terminal
     }
     ;
 
-/* ─────────────── EXPRESIONES REGULARES ─────────────── */
+/*  EXPRESIONES REGULARES  */
 
 expresion_regular
     : expresion_regular OR expresion_concatenada
@@ -250,7 +262,7 @@ expresion_primaria
     }
     ;
 
-/* ─────────────── BLOQUE SYNTAX ─────────────── */
+/*  BLOQUE SYNTAX  */
 
 bloque_syntax
     : SYNTAX_PARSER SYNTAX_BLOQUE_ABRE lista_no_terminales simbolo_inicial lista_producciones SYNTAX_BLOQUE_CIERRA
@@ -412,7 +424,7 @@ produccion
     ;
 
 cuerpo_produccion
-    : cuerpo_produccion OR lista_simbolos
+    : cuerpo_produccion OR alternativa
     {
         $$ = {
             tipo:'Alternativa',
@@ -422,7 +434,14 @@ cuerpo_produccion
             ]
         };
     }
-    | lista_simbolos
+    | alternativa
+    {
+        $$ = $1;
+    }
+    ;
+
+alternativa
+    : lista_simbolos
     {
         $$ = $1;
     }
