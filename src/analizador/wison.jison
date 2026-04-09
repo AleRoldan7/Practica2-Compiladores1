@@ -147,10 +147,10 @@ declaracion_terminal
             columna: @1.first_column
         };
         yy.manejador.agregarToken(
-            yytext,
-            @1.first_line,
-            @1.first_column + 1,
-            "Token para asignar",
+            $2,
+            @2.first_line,
+            @2.first_column + 1,
+            "Expresión regular: " + yy.manejador.regexToString($4),
             "TERMINAL"
         );
 
@@ -379,20 +379,25 @@ lista_producciones
 produccion
     : ID_NO_TERMINAL FLECHA cuerpo_produccion PUNTO_COMA
     {
+
+        let textoProduccion =
+            $1 + " → " +
+            yy.manejador.produccionToString($3);
+
         $$ = {
             tipo: 'Produccion',
             cabeza: $1,
-            cuerpo: $3,
-            linea: @1.first_line,
-            columna: @1.first_column
+            cuerpo: $3
         };
+
         yy.manejador.agregarToken(
-            $1,
+            textoProduccion,
             @1.first_line,
             @1.first_column + 1,
-            "Produccion definida",
+            "Producción gramatical",
             "PRODUCCION"
         );
+
     }
     | error PUNTO_COMA
     {

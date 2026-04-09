@@ -134,6 +134,72 @@ export class ManejoErrores {
     );
   }
 
+  regexToString(nodo: any): string {
+
+    if (!nodo) return "";
+
+    switch (nodo.tipo) {
+
+      case 'Caracter':
+        return `'${nodo.valor}'`;
+
+      case 'Rango':
+        return nodo.valor;
+
+      case 'ReferenciaTerminal':
+        return nodo.nombre;
+
+      case 'Union':
+        return this.regexToString(nodo.izq) +
+          " | " +
+          this.regexToString(nodo.der);
+
+      case 'Concatenacion':
+        return this.regexToString(nodo.izq) +
+          this.regexToString(nodo.der);
+
+      case 'Kleene':
+        return this.regexToString(nodo.expr) + "*";
+
+      case 'CerraduraPositiva':
+        return this.regexToString(nodo.expr) + "+";
+
+      case 'Opcional':
+        return this.regexToString(nodo.expr) + "?";
+
+      case 'Grupo':
+        return "(" + this.regexToString(nodo.expr) + ")";
+
+      default:
+        return "";
+    }
+
+  }
+
+  produccionToString(nodo: any): string {
+
+    if (!nodo) return "";
+
+    if (nodo.epsilon) return "ε";
+
+    switch (nodo.tipo) {
+
+      case 'Secuencia':
+        return nodo.simbolos
+          .map((s: any) => s.nombre)
+          .join(" ");
+
+      case 'Alternativa':
+        return nodo.opciones
+          .map((o: any) => this.produccionToString(o))
+          .join(" | ");
+
+      default:
+        return "";
+    }
+
+  }
+
   getToken(): Token[] { return this.tokens; }
   getError(): Token[] { return this.errores; }
 

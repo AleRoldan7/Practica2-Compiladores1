@@ -10,7 +10,7 @@ export class Gramatica {
     producciones:   Produccion[] = [];
     simboloInicial: string = '';
 
-    // Símbolo especial para épsilon — NO es un terminal real
+    // Símbolo especial para épsilon 
     static readonly EPSILON = 'ε';
 
     static desdeAST(ast: any): Gramatica {

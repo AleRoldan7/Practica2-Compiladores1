@@ -165,10 +165,10 @@ case 8:
             columna: _$[$0-4].first_column
         };
         yy.manejador.agregarToken(
-            yytext,
-            _$[$0-4].first_line,
-            _$[$0-4].first_column + 1,
-            "Token para asignar",
+            $$[$0-3],
+            _$[$0-3].first_line,
+            _$[$0-3].first_column + 1,
+            "Expresión regular: " + yy.manejador.regexToString($$[$0-1]),
             "TERMINAL"
         );
 
@@ -357,20 +357,25 @@ case 33:
 break;
 case 36:
 
+
+        let textoProduccion =
+            $$[$0-3] + " → " +
+            yy.manejador.produccionToString($$[$0-1]);
+
         this.$ = {
             tipo: 'Produccion',
             cabeza: $$[$0-3],
-            cuerpo: $$[$0-1],
-            linea: _$[$0-3].first_line,
-            columna: _$[$0-3].first_column
+            cuerpo: $$[$0-1]
         };
+
         yy.manejador.agregarToken(
-            $$[$0-3],
+            textoProduccion,
             _$[$0-3].first_line,
             _$[$0-3].first_column + 1,
-            "Produccion definida",
+            "Producción gramatical",
             "PRODUCCION"
         );
+
     
 break;
 case 37:

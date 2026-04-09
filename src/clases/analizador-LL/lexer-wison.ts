@@ -12,25 +12,25 @@ export class LexerWison {
 
     const terminales: any[] = ast?.lex?.terminales ?? [];
 
-    // 1. guardar todos los terminales en un mapa
+    //guarda todos los terminales en un mapa
     for (const t of terminales) {
       this.mapaTerminales.set(t.nombre, t.expresion);
     }
 
-    // 2. detectar macros usadas dentro de otros macros
+    //detectar macros usadas dentro de otros macros
     const usados = new Set<string>();
 
     for (const t of terminales) {
-      this._buscarReferencias(t.expresion, usados);
+      this.buscarReferencias(t.expresion, usados);
     }
 
-    // 3. generar regex SOLO para los tokens finales
+    // generar ER SOLO para los tokens finales
     for (const t of terminales) {
 
-      // si este terminal es usado dentro de otro → es macro auxiliar
+      // si este terminal es usado dentro de otro es una macro
       if (usados.has(t.nombre)) continue;
 
-      const patron = this._construirRegexExpandido(t.expresion);
+      const patron = this.construirERExpandida(t.expresion);
 
       this.reglas.push({
         nombre: t.nombre,
@@ -39,7 +39,7 @@ export class LexerWison {
     }
   }
 
-  private _buscarReferencias(nodo: any, usados: Set<string>) {
+  private buscarReferencias(nodo: any, usados: Set<string>) {
 
     if (!nodo) return;
 
@@ -51,60 +51,60 @@ export class LexerWison {
 
       case 'Concatenacion':
       case 'Union':
-        this._buscarReferencias(nodo.izq, usados);
-        this._buscarReferencias(nodo.der, usados);
+        this.buscarReferencias(nodo.izq, usados);
+        this.buscarReferencias(nodo.der, usados);
         break;
 
       case 'Kleene':
       case 'CerraduraPositiva':
       case 'Opcional':
       case 'Grupo':
-        this._buscarReferencias(nodo.expr, usados);
+        this.buscarReferencias(nodo.expr, usados);
         break;
     }
   }
 
-  private _construirRegexExpandido(nodo: any): string {
+  private construirERExpandida(nodo: any): string {
 
     if (!nodo) return '';
 
     switch (nodo.tipo) {
 
       case 'Caracter':
-        return this._escapar(nodo.valor);
+        return this.escapar(nodo.valor);
 
       case 'Rango':
-        return this._rangoARegex(nodo.valor);
+        return this.rangoER(nodo.valor);
 
       case 'Concatenacion':
-        return this._construirRegexExpandido(nodo.izq)
-          + this._construirRegexExpandido(nodo.der);
+        return this.construirERExpandida(nodo.izq)
+          + this.construirERExpandida(nodo.der);
 
       case 'Union':
         return '(?:'
-          + this._construirRegexExpandido(nodo.izq)
+          + this.construirERExpandida(nodo.izq)
           + '|'
-          + this._construirRegexExpandido(nodo.der)
+          + this.construirERExpandida(nodo.der)
           + ')';
 
       case 'Kleene':
         return '(?:'
-          + this._construirRegexExpandido(nodo.expr)
+          + this.construirERExpandida(nodo.expr)
           + ')*';
 
       case 'CerraduraPositiva':
         return '(?:'
-          + this._construirRegexExpandido(nodo.expr)
+          + this.construirERExpandida(nodo.expr)
           + ')+';
 
       case 'Opcional':
         return '(?:'
-          + this._construirRegexExpandido(nodo.expr)
+          + this.construirERExpandida(nodo.expr)
           + ')?';
 
       case 'Grupo':
         return '(?:'
-          + this._construirRegexExpandido(nodo.expr)
+          + this.construirERExpandida(nodo.expr)
           + ')';
 
       case 'ReferenciaTerminal':
@@ -116,16 +116,13 @@ export class LexerWison {
           return '';
         }
 
-        return this._construirRegexExpandido(ref);
+        return this.construirERExpandida(ref);
     }
 
     return '';
   }
 
-  /**
-   * Tokeniza el texto de entrada.
-   * Devuelve null si encuentra un carácter que no reconoce.
-   */
+
   tokenizar(texto: string): { tokens: TokenLexer[]; errores: string[] } {
     const tokens: TokenLexer[] = [];
     const errores: string[] = [];
@@ -160,7 +157,7 @@ export class LexerWison {
     return { tokens, errores };
   }
 
-  // ── Construcción de regex desde el AST de expresión regular ───────────────
+  // ── Construcción de regex desde el AST de expresión regular 
 
   private _construirRegex(nodo: any): string {
     if (!nodo) return '';
@@ -168,12 +165,12 @@ export class LexerWison {
     switch (nodo.tipo) {
 
       case 'Caracter':
-        // 'a', 'if', 'while', etc — escapar caracteres especiales de regex
-        return this._escapar(nodo.valor);
+        // 'a', 'if', 'while'
+        return this.escapar(nodo.valor);
 
       case 'Rango':
         // [0-9], [aA-zZ], [a-z], [A-Z]
-        return this._rangoARegex(nodo.valor);
+        return this.rangoER(nodo.valor);
 
       case 'Kleene':
         return '(?:' + this._construirRegex(nodo.expr) + ')*';
@@ -194,21 +191,21 @@ export class LexerWison {
         return '(?:' + this._construirRegex(nodo.expr) + ')';
 
       case 'ReferenciaTerminal':
-        // Referencia a otro terminal — buscar su regex ya compilada
+        // Referencia a otro terminal 
         const regla = this.reglas.find(r => r.nombre === nodo.nombre);
         if (regla) {
-          // Extraer el patrón interno del regex (quitar el ^(?:...) wrapper)
+          // Extraer el patrón interno del regex 
           const src = regla.regex.source;
           return src.slice(4, src.length - 1); // quita '^(?:' y ')'
         }
-        return this._escapar(nodo.nombre);
+        return this.escapar(nodo.nombre);
 
       default:
         return '';
     }
   }
 
-  private _rangoARegex(valor: string): string {
+  private rangoER(valor: string): string {
     switch (valor) {
       case '[0-9]': return '[0-9]';
       case '[a-z]': return '[a-z]';
@@ -218,7 +215,7 @@ export class LexerWison {
     }
   }
 
-  private _escapar(s: string): string {
+  private escapar(s: string): string {
     // Escapa caracteres especiales de regex
     return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   }

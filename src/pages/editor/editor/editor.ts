@@ -6,10 +6,11 @@ import Swal from 'sweetalert2';
 import { ManejoErrores } from '../../../clases/manejo-errores/errores';
 import { WisonService } from '../../../services/arbol-service/wison.service';
 import { RouterLink } from '@angular/router';
+import { TokenFilterPipe } from '../../../pipe/token-filter.pipe';
 
 @Component({
   selector: 'app-editor',
-  imports: [FormsModule, CommonModule, RouterLink],
+  imports: [FormsModule, CommonModule, RouterLink, TokenFilterPipe],
   templateUrl: './editor.html',
   styleUrl: './editor.css',
 })
@@ -25,7 +26,6 @@ export class Editor {
 
   constructor(public wisonService: WisonService) {}
 
-  // ─── Analizar ─────────────────────────────────────────────────────────────
   analizar() {
     this.analizadorListo = false;
 
@@ -38,18 +38,15 @@ export class Editor {
     try {
       const parser = (window as any).wisonParser;
       this.manejador.reset();
-
       parser.yy = { Token, manejador: this.manejador };
 
       const resultado = parser.parse(this.codigo);
-
       this.tokens  = this.manejador.getToken();
       this.errores = this.manejador.getError();
 
       if (resultado.ast && this.errores.length === 0) {
         const erroresLL = this.wisonService.construirDesdeAST(
-          resultado.ast,
-          this.nombreAnalizador.trim()
+          resultado.ast, this.nombreAnalizador.trim()
         );
 
         if (erroresLL.length > 0) {
@@ -59,7 +56,7 @@ export class Editor {
         } else {
           this.analizadorListo = true;
           Swal.fire({ icon: 'success', title: '¡Analizador listo!',
-            text: `"${this.nombreAnalizador}" fue creado y guardado correctamente.` });
+            text: `"${this.nombreAnalizador}" fue creado y guardado.` });
           return;
         }
       }
@@ -76,30 +73,24 @@ export class Editor {
       text: `Total: ${this.errores.length}` });
   }
 
-  // ─── Cargar archivo .wison ────────────────────────────────────────────────
   cargarArchivo(event: Event) {
     const input = event.target as HTMLInputElement;
     if (!input.files?.length) return;
-    const file = input.files[0];
     const reader = new FileReader();
     reader.onload = (e) => {
       this.codigo = e.target?.result as string;
       this.actualizarLineas();
     };
-    reader.readAsText(file);
-    // reset para que pueda volver a cargar el mismo archivo
+    reader.readAsText(input.files[0]);
     input.value = '';
   }
 
-  // ─── Eliminar analizador guardado ─────────────────────────────────────────
   eliminarAnalizador(nombre: string) {
     Swal.fire({
-      icon: 'warning',
-      title: '¿Eliminar analizador?',
+      icon: 'warning', title: '¿Eliminar analizador?',
       text: `"${nombre}" se eliminará permanentemente.`,
       showCancelButton: true,
-      confirmButtonText: 'Eliminar',
-      confirmButtonColor: '#dc3545',
+      confirmButtonText: 'Eliminar', confirmButtonColor: '#dc3545',
       cancelButtonText: 'Cancelar'
     }).then(r => {
       if (r.isConfirmed) {
@@ -109,16 +100,6 @@ export class Editor {
     });
   }
 
-  // ─── Cargar AST de un analizador guardado al editor ───────────────────────
-  cargarEnEditor(nombre: string) {
-    const a = this.wisonService.analizadores.find(x => x.nombre === nombre);
-    if (!a?.ast) return;
-    // No tenemos el texto original, solo avisamos
-    Swal.fire({ icon: 'info', title: 'Analizador ya cargado',
-      text: `"${nombre}" ya está activo. El código fuente original no se almacena, sólo el AST.` });
-  }
-
-  // ─── Utilidades ──────────────────────────────────────────────────────────
   limpiar() {
     this.codigo           = '';
     this.nombreAnalizador = '';
