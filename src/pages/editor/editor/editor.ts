@@ -22,12 +22,18 @@ export class Editor {
   tokens:           Token[] = [];
   errores:          Token[] = [];
   lineasArray:      number[] = [1];
-  analizadorListo = false;
+  analizadorListo   = false;
+
+  infoGenerada: {
+    terminales:   { nombre: string; regex: string }[];
+    producciones: { cabeza: string; cuerpo: string }[];
+  } | null = null;
 
   constructor(public wisonService: WisonService) {}
 
   analizar() {
     this.analizadorListo = false;
+    this.infoGenerada    = null;
 
     if (!this.nombreAnalizador.trim()) {
       Swal.fire({ icon: 'warning', title: 'Nombre requerido',
@@ -55,6 +61,9 @@ export class Editor {
           ));
         } else {
           this.analizadorListo = true;
+          this.infoGenerada = this.wisonService.getInfoAnalizador(
+            this.nombreAnalizador.trim()
+          );
           Swal.fire({ icon: 'success', title: '¡Analizador listo!',
             text: `"${this.nombreAnalizador}" fue creado y guardado.` });
           return;
@@ -95,6 +104,7 @@ export class Editor {
     }).then(r => {
       if (r.isConfirmed) {
         this.wisonService.eliminar(nombre);
+        if (this.infoGenerada) this.infoGenerada = null;
         Swal.fire({ icon: 'success', title: 'Eliminado', timer: 1200, showConfirmButton: false });
       }
     });
@@ -107,6 +117,7 @@ export class Editor {
     this.errores          = [];
     this.analizadorListo  = false;
     this.lineasArray      = [1];
+    this.infoGenerada     = null;
   }
 
   actualizarLineas() {

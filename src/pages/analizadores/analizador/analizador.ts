@@ -25,7 +25,21 @@ export class Analizador {
   tokensLexer: TokenLexer[] = [];
   arbol:       NodoArbol | null = null;
 
+  infoAnalizador: {
+    terminales:   { nombre: string; regex: string }[];
+    producciones: { cabeza: string; cuerpo: string }[];
+  } | null = null;
+
   constructor(public servicio: WisonService) {}
+
+  onCambiarAnalizador(nombre: string) {
+    this.infoAnalizador = nombre ? this.servicio.getInfoAnalizador(nombre) : null;
+    this.resultado      = null;
+    this.arbol          = null;
+    this.erroresLL      = [];
+    this.tokensLexer    = [];
+    this.cadenaEntrada  = '';
+  }
 
   analizar() {
     this.resultado   = null;
@@ -56,7 +70,7 @@ export class Analizador {
     }
   }
 
-  get erroresLexicos():    ErrorLL[] { return this.erroresLL.filter(e => e.tipo === 'LEXICO'); }
-  get erroresSintacticos():ErrorLL[] { return this.erroresLL.filter(e => e.tipo === 'SINTACTICO'); }
-  get erroresSemanticos(): ErrorLL[] { return this.erroresLL.filter(e => e.tipo === 'SEMANTICO'); }
+  get erroresLexicos():     ErrorLL[] { return this.erroresLL.filter(e => e.tipo === 'LEXICO'); }
+  get erroresSintacticos(): ErrorLL[] { return this.erroresLL.filter(e => e.tipo === 'SINTACTICO'); }
+  get erroresSemanticos():  ErrorLL[] { return this.erroresLL.filter(e => e.tipo === 'SEMANTICO'); }
 }
