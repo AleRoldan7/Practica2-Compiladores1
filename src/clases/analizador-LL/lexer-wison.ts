@@ -1,45 +1,99 @@
 export interface TokenLexer {
-  nombre: string;   // ej: $_ID
-  valor: string;   // ej: variable
+  nombre: string;
+  valor: string;
 }
+
+type Matcher = (input: string, pos: number) => number;
 
 export class LexerWison {
 
-  private reglas: { nombre: string; regex: RegExp }[] = [];
+  private reglas: { nombre: string; matcher: Matcher; prioridad: number }[] = [];
   private mapaTerminales = new Map<string, any>();
 
   constructor(ast: any) {
 
     const terminales: any[] = ast?.lex?.terminales ?? [];
 
+    // guardar terminales
     for (const t of terminales) {
       this.mapaTerminales.set(t.nombre, t.expresion);
     }
 
+    // detectar macros
     const usados = new Set<string>();
-
     for (const t of terminales) {
       this.buscarReferencias(t.expresion, usados);
     }
 
+    // crear reglas
     for (const t of terminales) {
 
       if (usados.has(t.nombre)) continue;
 
-      const patron = this.construirERExpandida(t.expresion);
+      const matcher = this.crearMatcher(t.expresion);
 
       this.reglas.push({
         nombre: t.nombre,
-        regex: new RegExp('^(?:' + patron + ')')
+        matcher,
+        prioridad: this.calcularPrioridad(t.expresion)
       });
-
     }
 
-    // PRIORIDAD a tokens más largos (IP antes que Numero)
-    this.reglas.sort(
-      (a, b) => b.regex.source.length - a.regex.source.length
-    );
+    // ordenar reglas
+    this.reglas.sort((a, b) => {
+
+      if (a.prioridad !== b.prioridad)
+        return b.prioridad - a.prioridad;
+
+      // longest match de prueba
+      const prueba =
+        "DEFINE MAP MOVE IF AND ON_BORDER UP DOWN LEFT RIGHT X 12345 !~~~ [] ()";
+
+      const la = a.matcher(prueba, 0);
+      const lb = b.matcher(prueba, 0);
+
+      return lb - la;
+    });
   }
+
+
+  // prioridad léxica
+  private calcularPrioridad(nodo: any): number {
+
+    if (!nodo) return 0;
+
+    switch (nodo.tipo) {
+
+      // palabras reservadas o símbolos exactos
+      case 'Caracter':
+        return 100;
+
+      // secuencias de símbolos 
+      case 'Concatenacion':
+        return 95;
+
+      // grupo
+      case 'Grupo':
+        return this.calcularPrioridad(nodo.expr);
+
+      
+      case 'Union':
+        return 80;
+
+      // rangos
+      case 'Rango':
+        return 20;
+
+      // identificadores o números
+      case 'Kleene':
+      case 'CerraduraPositiva':
+        return 10;
+
+      default:
+        return 1;
+    }
+  }
+
 
   private buscarReferencias(nodo: any, usados: Set<string>) {
 
@@ -66,159 +120,274 @@ export class LexerWison {
     }
   }
 
-  private construirERExpandida(nodo: any): string {
 
-    if (!nodo) return '';
+  private crearMatcher(nodo: any): Matcher {
+
+    if (!nodo) return () => 0;
 
     switch (nodo.tipo) {
 
+      // texto literal
       case 'Caracter':
-        return this.escapar(nodo.valor);
 
+        return (input, pos) => {
+
+          const texto = nodo.valor;
+
+          return input.startsWith(texto, pos)
+            ? texto.length
+            : 0;
+        };
+
+
+      // rangos
       case 'Rango':
-        return this.rangoER(nodo.valor);
 
-      case 'Concatenacion':
-        return this.construirERExpandida(nodo.izq)
-          + this.construirERExpandida(nodo.der);
+        return (input, pos) => {
 
-      case 'Union':
-        return '(?:'
-          + this.construirERExpandida(nodo.izq)
-          + '|'
-          + this.construirERExpandida(nodo.der)
-          + ')';
+          if (pos >= input.length) return 0;
 
-      case 'Kleene':
-        return '(?:'
-          + this.construirERExpandida(nodo.expr)
-          + ')*';
+          const c = input[pos];
 
-      case 'CerraduraPositiva':
-        return '(?:'
-          + this.construirERExpandida(nodo.expr)
-          + ')+';
+          if (nodo.valor === '[0-9]')
+            return c >= '0' && c <= '9' ? 1 : 0;
 
-      case 'Opcional':
-        return '(?:'
-          + this.construirERExpandida(nodo.expr)
-          + ')?';
+          if (nodo.valor === '[a-z]')
+            return c >= 'a' && c <= 'z' ? 1 : 0;
 
+          if (nodo.valor === '[A-Z]')
+            return c >= 'A' && c <= 'Z' ? 1 : 0;
+
+          if (
+            nodo.valor === '[a-zA-Z]' ||
+            nodo.valor === '[A-Za-z]'
+          )
+            return (
+              (c >= 'a' && c <= 'z') ||
+              (c >= 'A' && c <= 'Z')
+            ) ? 1 : 0;
+
+          return 0;
+        };
+
+
+      // concatenación
+      case 'Concatenacion': {
+
+        const izq = this.crearMatcher(nodo.izq);
+        const der = this.crearMatcher(nodo.der);
+
+        return (input, pos) => {
+
+          const l1 = izq(input, pos);
+
+          if (l1 === 0) return 0;
+
+          const l2 = der(input, pos + l1);
+
+          // permitir segunda parte opcional (*)
+          return l1 + l2;
+        };
+      }
+
+
+      // unión |
+      case 'Union': {
+
+        const a = this.crearMatcher(nodo.izq);
+        const b = this.crearMatcher(nodo.der);
+
+        return (input, pos) => {
+
+          const l1 = a(input, pos);
+          const l2 = b(input, pos);
+
+          return Math.max(l1, l2);
+        };
+      }
+
+
+      // *
+      case 'Kleene': {
+
+        const expr = this.crearMatcher(nodo.expr);
+
+        return (input, pos) => {
+
+          let total = 0;
+
+          while (true) {
+
+            const l = expr(input, pos + total);
+
+            if (l === 0) break;
+
+            total += l;
+          }
+
+          return total;
+        };
+      }
+
+
+      // +
+      case 'CerraduraPositiva': {
+
+        const expr = this.crearMatcher(nodo.expr);
+
+        return (input, pos) => {
+
+          let total = 0;
+
+          let l = expr(input, pos);
+
+          if (l === 0) return 0;
+
+          total += l;
+
+          while (true) {
+
+            l = expr(input, pos + total);
+
+            if (l === 0) break;
+
+            total += l;
+          }
+
+          return total;
+        };
+      }
+
+
+      // ?
+      case 'Opcional': {
+
+        const expr = this.crearMatcher(nodo.expr);
+
+        return (input, pos) => {
+
+          return expr(input, pos);
+        };
+      }
+
+
+      // ()
       case 'Grupo':
-        return '(?:'
-          + this.construirERExpandida(nodo.expr)
-          + ')';
 
-      case 'ReferenciaTerminal':
+        return this.crearMatcher(nodo.expr);
+
+
+      // macros
+      case 'ReferenciaTerminal': {
 
         const ref = this.mapaTerminales.get(nodo.nombre);
 
-        if (!ref) {
-          console.warn("macro no encontrada:", nodo.nombre);
-          return '';
-        }
-
-        return this.construirERExpandida(ref);
+        return this.crearMatcher(ref);
+      }
     }
 
-    return '';
+    return () => 0;
   }
 
 
-  tokenizar(texto: string): { tokens: TokenLexer[]; errores: string[] } {
+  tokenizar(texto: string) {
+
     const tokens: TokenLexer[] = [];
     const errores: string[] = [];
-    let resto = texto.trim();
 
-    while (resto.length > 0) {
-      // Ignorar espacios/tabs/saltos
-      const espacios = resto.match(/^[\s]+/);
-      if (espacios) {
-        resto = resto.slice(espacios[0].length);
+    let pos = 0;
+
+    while (pos < texto.length) {
+
+      const c = texto[pos];
+
+      // ignorar espacios
+      if (/\s/.test(c)) {
+        pos++;
         continue;
       }
 
-      let matchEncontrado = false;
+
+      // cadenas
+      if (c === '"' || c === "'") {
+
+        const comilla = c;
+        let i = pos + 1;
+        let contenido = "";
+
+        while (i < texto.length && texto[i] !== comilla) {
+
+          contenido += texto[i];
+          i++;
+        }
+
+        if (i >= texto.length) {
+
+          errores.push(
+            "Cadena sin cerrar en posicion " + pos
+          );
+
+          pos++;
+          continue;
+        }
+
+        tokens.push({
+          nombre: "$_Cadena",
+          valor: comilla + contenido + comilla
+        });
+
+        pos = i + 1;
+        continue;
+      }
+
+
+      let mejorToken: TokenLexer | null = null;
+      let mejorLongitud = 0;
+      let mejorPrioridad = -1;
+
       for (const regla of this.reglas) {
-        const m = resto.match(regla.regex);
-        if (m) {
-          tokens.push({ nombre: regla.nombre, valor: m[0] });
-          resto = resto.slice(m[0].length);
-          matchEncontrado = true;
-          break;
+
+        const l = regla.matcher(texto, pos);
+
+        if (
+          l > 0 &&
+          (
+            l > mejorLongitud ||
+            (
+              l === mejorLongitud &&
+              regla.prioridad > mejorPrioridad
+            )
+          )
+        ) {
+
+          mejorLongitud = l;
+          mejorPrioridad = regla.prioridad;
+
+          mejorToken = {
+            nombre: regla.nombre,
+            valor: texto.substring(pos, pos + l)
+          };
         }
       }
 
-      if (!matchEncontrado) {
-        // Carácter no reconocido — reportar y avanzar
-        errores.push(`Carácter no reconocido: '${resto[0]}'`);
-        resto = resto.slice(1);
+
+      if (mejorToken) {
+
+        tokens.push(mejorToken);
+        pos += mejorLongitud;
+
+      } else {
+
+        tokens.push({
+          nombre: "SIMBOLO",
+          valor: c
+        });
+
+        pos++;
       }
     }
 
     return { tokens, errores };
   }
 
-  //Construcción de regex desde el AST de expresión regular 
-
-  private _construirRegex(nodo: any): string {
-    if (!nodo) return '';
-
-    switch (nodo.tipo) {
-
-      case 'Caracter':
-        // 'a', 'if', 'while'
-        return this.escapar(nodo.valor);
-
-      case 'Rango':
-        // [0-9], [aA-zZ], [a-z], [A-Z]
-        return this.rangoER(nodo.valor);
-
-      case 'Kleene':
-        return '(?:' + this._construirRegex(nodo.expr) + ')*';
-
-      case 'CerraduraPositiva':
-        return '(?:' + this._construirRegex(nodo.expr) + ')+';
-
-      case 'Opcional':
-        return '(?:' + this._construirRegex(nodo.expr) + ')?';
-
-      case 'Concatenacion':
-        return this._construirRegex(nodo.izq) + this._construirRegex(nodo.der);
-
-      case 'Union':
-        return '(?:' + this._construirRegex(nodo.izq) + '|' + this._construirRegex(nodo.der) + ')';
-
-      case 'Grupo':
-        return '(?:' + this._construirRegex(nodo.expr) + ')';
-
-      case 'ReferenciaTerminal':
-        // Referencia a otro terminal 
-        const regla = this.reglas.find(r => r.nombre === nodo.nombre);
-        if (regla) {
-          // Extraer el patrón interno del regex 
-          const src = regla.regex.source;
-          return src.slice(4, src.length - 1); // quita '^(?:' y ')'
-        }
-        return this.escapar(nodo.nombre);
-
-      default:
-        return '';
-    }
-  }
-
-  private rangoER(valor: string): string {
-    switch (valor) {
-      case '[0-9]': return '[0-9]';
-      case '[a-z]': return '[a-z]';
-      case '[A-Z]': return '[A-Z]';
-      case '[aA-zZ]': return '[a-zA-Z]';
-      default: return valor;
-    }
-  }
-
-  private escapar(s: string): string {
-    // Escapa caracteres especiales de regex
-    return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  }
 }

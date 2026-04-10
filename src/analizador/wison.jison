@@ -35,7 +35,9 @@
 "+"                   return 'MAS';
 "*"                   return 'KLEENE';
 "."                   return 'PUNTO';    
-"-"                   return 'GUION';     
+"-"                   return 'GUION';
+"!"                   return 'NOT';
+"~"                   return 'NEGACION';
 "¿"                   return 'APERTURA';
 
 "?Wison"              return 'CIERRE_WISON';

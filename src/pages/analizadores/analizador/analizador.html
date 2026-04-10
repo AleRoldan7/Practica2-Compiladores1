@@ -1,226 +1,295 @@
-<div class="container-fluid p-3">
-  <div class="row g-3">
+<!-- analizador.html -->
+<div class="analizador-shell">
 
-    <!-- Panel izquierdo -->
-    <div class="col-md-4">
-      <div class="card shadow-sm">
-        <div class="card-header bg-primary text-white fw-semibold d-flex justify-content-between align-items-center">
-          Analizador LL
-          <button class="btn btn-light btn-sm" [routerLink]="['/editor']">Regresar</button>
+  <!-- ══════════════════════════════════════
+       SIDEBAR DE ANALIZADORES
+  ══════════════════════════════════════ -->
+  <aside class="sidebar" [class.sidebar--open]="sidebarAbierta">
+
+    <div class="sidebar__header">
+      <span class="sidebar__title">Analizadores</span>
+      <button class="sidebar__close" (click)="sidebarAbierta = false" title="Cerrar">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+        </svg>
+      </button>
+    </div>
+
+    <!-- Buscador -->
+    <div class="sidebar__search">
+      <svg width="13" height="13" viewBox="0 0 16 16" fill="none" class="sidebar__search-icon">
+        <circle cx="6.5" cy="6.5" r="5" stroke="currentColor" stroke-width="1.5" />
+        <path d="M10 10l3.5 3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+      </svg>
+      <input type="text" class="sidebar__search-input" placeholder="Buscar…" [(ngModel)]="filtroAnalizador"
+        (input)="filtrarAnalizadores()" />
+    </div>
+
+    <!-- Lista -->
+    <div class="sidebar__list">
+      <p class="sidebar__empty" *ngIf="servicio.analizadores.length === 0">
+        No hay analizadores.
+        <a [routerLink]="['/editor']" class="sidebar__link">Ir al Editor</a>
+      </p>
+
+      <button *ngFor="let a of analizadoresFiltrados" class="sidebar__item"
+        [class.sidebar__item--active]="a.nombre === analizadorSeleccionado" (click)="seleccionarAnalizador(a.nombre)">
+        <svg width="8" height="8" viewBox="0 0 8 8" style="flex-shrink:0">
+          <circle cx="4" cy="4" r="4" [attr.fill]="a.nombre === analizadorSeleccionado ? '#3b82f6' : '#475569'" />
+        </svg>
+        {{ a.nombre }}
+      </button>
+
+      <p class="sidebar__empty" *ngIf="servicio.analizadores.length > 0 && analizadoresFiltrados.length === 0">
+        Sin resultados
+      </p>
+    </div>
+
+    <!-- Info del analizador activo -->
+    <div class="sidebar__info" *ngIf="infoAnalizador">
+
+      <p class="sidebar__info-title">
+        Tokens ({{ infoAnalizador.terminales.length }})
+      </p>
+      <div class="sidebar__tokens">
+        <span *ngFor="let t of infoAnalizador.terminales" class="sidebar__token" [title]="t.regex">
+          {{ t.nombre }}
+        </span>
+      </div>
+
+      <p class="sidebar__info-title" style="margin-top:10px;">
+        Producciones ({{ infoAnalizador.producciones.length }})
+      </p>
+      <div class="sidebar__producciones">
+        <div *ngFor="let p of infoAnalizador.producciones" class="sidebar__prod">
+          <span class="sidebar__prod-cabeza">{{ p.cabeza }}</span>
+          <span class="sidebar__prod-arrow">→</span>
+          <code class="sidebar__prod-cuerpo">{{ p.cuerpo }}</code>
+        </div>
+      </div>
+
+    </div>
+
+  </aside>
+
+  <!-- Overlay móvil -->
+  <div class="sidebar-overlay" *ngIf="sidebarAbierta" (click)="sidebarAbierta = false"></div>
+
+  <!-- ══════════════════════════════════════
+       CONTENIDO PRINCIPAL
+  ══════════════════════════════════════ -->
+  <div class="main-content">
+
+    <!-- ── Topbar ── -->
+    <div class="topbar">
+      <div class="topbar__left">
+        <button class="topbar__menu-btn" (click)="sidebarAbierta = true" title="Seleccionar analizador">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <rect x="1" y="3.5" width="14" height="1.4" rx="0.7" fill="currentColor" />
+            <rect x="1" y="7.3" width="10" height="1.4" rx="0.7" fill="currentColor" />
+            <rect x="1" y="11.1" width="12" height="1.4" rx="0.7" fill="currentColor" />
+          </svg>
+          Analizadores
+        </button>
+
+        <div class="topbar__active" *ngIf="analizadorSeleccionado">
+          <span class="topbar__badge">Activo</span>
+          <span class="topbar__name">{{ analizadorSeleccionado }}</span>
+        </div>
+        <span class="topbar__hint" *ngIf="!analizadorSeleccionado">
+          Selecciona un analizador
+        </span>
+      </div>
+
+      <button class="topbar__back" [routerLink]="['/editor']">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+          <path d="M9 2L4 7l5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
+            stroke-linejoin="round" />
+        </svg>
+        Editor
+      </button>
+    </div>
+
+    <!-- ── Cuerpo ── -->
+    <div class="body-grid">
+
+      <!-- ╔══════════════════════════════╗
+           ║ PANEL IZQUIERDO — entrada   ║
+           ╚══════════════════════════════╝ -->
+      <div class="panel panel--left">
+
+        <!-- Modo -->
+        <div class="field">
+          <label class="field__label">Modo de entrada</label>
+          <div class="toggle-group">
+            <button class="toggle-btn" [class.toggle-btn--active]="modoTexto"
+              (click)="modoTexto = true; cadenaEntrada = ''">
+              Texto real
+            </button>
+            <button class="toggle-btn" [class.toggle-btn--active]="!modoTexto"
+              (click)="modoTexto = false; cadenaEntrada = ''">
+              Tokens manuales
+            </button>
+          </div>
         </div>
 
-        <div class="card-body d-flex flex-column gap-3">
+        <!-- Textarea + dropzone -->
+        <div class="field">
+          <label class="field__label">
+            {{ modoTexto ? 'Texto de entrada' : 'Tokens de entrada' }}
+          </label>
 
-          <!-- Selector -->
-          <div>
-            <label class="form-label fw-semibold">Seleccionar analizador</label>
-            <select class="form-select" [(ngModel)]="analizadorSeleccionado"
-              (ngModelChange)="onCambiarAnalizador($event)">
-              <option value="">-- Seleccione --</option>
-              <option *ngFor="let a of servicio.analizadores" [value]="a.nombre">
-                {{ a.nombre }}
-              </option>
-            </select>
-            <small class="text-muted" *ngIf="servicio.analizadores.length === 0">
-              No hay analizadores. Ve al <a [routerLink]="['/editor']">Editor</a>.
-            </small>
-          </div>
-
-          <div *ngIf="infoAnalizador" class="border rounded p-2" style="background:#f8f9fa;">
-
-            <!-- Terminales disponibles -->
-            <p class="fw-semibold small mb-1">
-              Tokens aceptados ({{ infoAnalizador.terminales.length }}):
-            </p>
-            <div class="d-flex flex-wrap gap-1 mb-2">
-              <span *ngFor="let t of infoAnalizador.terminales"
-                class="badge"
-                style="background:#0d6efd; font-family:monospace; font-size:10px;"
-                [title]="t.regex">
-                {{ t.nombre }}
-              </span>
-            </div>
-
-            <!-- Producciones -->
-            <p class="fw-semibold small mb-1">
-              Producciones ({{ infoAnalizador.producciones.length }}):
-            </p>
-            <div style="max-height:160px; overflow-y:auto;">
-              <table class="table table-sm mb-0" style="font-size:11px;">
-                <tbody>
-                  <tr *ngFor="let p of infoAnalizador.producciones">
-                    <td style="white-space:nowrap;">
-                      <span class="badge" style="background:#6f42c1; font-family:monospace;">
-                        {{ p.cabeza }}
-                      </span>
-                    </td>
-                    <td class="text-muted px-1">→</td>
-                    <td>
-                      <code style="font-size:10px;">{{ p.cuerpo }}</code>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-
-          
-          </div>
-
-          <!-- Toggle modo -->
-          <div>
-            <label class="form-label fw-semibold d-block">Modo de entrada</label>
-            <div class="btn-group w-100" role="group">
-              <button class="btn btn-sm"
-                [class.btn-primary]="modoTexto"
-                [class.btn-outline-primary]="!modoTexto"
-                (click)="modoTexto = true; cadenaEntrada = ''">
-                Texto real
-              </button>
-              <button class="btn btn-sm"
-                [class.btn-primary]="!modoTexto"
-                [class.btn-outline-primary]="modoTexto"
-                (click)="modoTexto = false; cadenaEntrada = ''">
-                Tokens manuales
-              </button>
-            </div>
-          </div>
-
-          <!-- Entrada -->
-          <div>
-            <label class="form-label fw-semibold">
-              {{ modoTexto ? 'Texto de entrada' : 'Tokens de entrada' }}
-            </label>
-            <textarea class="form-control font-monospace" rows="4"
-              [(ngModel)]="cadenaEntrada"
+          <div class="entry-area">
+            <textarea class="entry-textarea" rows="5" [(ngModel)]="cadenaEntrada"
               [placeholder]="modoTexto ? 'Ej: variable + variable' : 'Ej: $_ID $_Mas $_ID'">
             </textarea>
-            <small class="text-muted">
-              <span *ngIf="modoTexto">El lexer convierte el texto en tokens automáticamente.</span>
-              <span *ngIf="!modoTexto">Escribe los nombres de tokens separados por espacios.</span>
-            </small>
-          </div>
 
-          <button class="btn btn-primary fw-semibold"
-            (click)="analizar()"
-            [disabled]="!analizadorSeleccionado || !cadenaEntrada.trim()">
-            Analizar
-          </button>
-
-          <!-- Resultado -->
-          <div *ngIf="resultado !== null">
-            <div class="alert fw-semibold py-2 mb-0"
-              [class.alert-success]="resultado.aceptada"
-              [class.alert-danger]="!resultado.aceptada">
-              {{ resultado.aceptada ? 'Cadena aceptada' : 'Cadena rechazada' }}
+            <!-- Dropzone .txt -->
+            <div class="dropzone" [class.dropzone--over]="dragging" (dragover)="onDragOver($event)"
+              (dragleave)="dragging = false" (drop)="onDrop($event)" (click)="fileInput.click()"
+              title="Cargar archivo .txt">
+              <input #fileInput type="file" accept=".txt" style="display:none" (change)="onFileChange($event)" />
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                <rect x="2" y="3" width="16" height="14" rx="2" stroke="currentColor" stroke-width="1.4" />
+                <path d="M10 7v6M7 10l3-3 3 3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"
+                  stroke-linejoin="round" />
+              </svg>
+              <span class="dropzone__label">Cargar .txt</span>
+              <span class="dropzone__file" *ngIf="nombreArchivo">{{ nombreArchivo }}</span>
             </div>
           </div>
 
-          <!-- Tokens del lexer -->
-          <div *ngIf="modoTexto && tokensLexer.length > 0">
-            <p class="fw-semibold mb-1 small">Tokens reconocidos:</p>
-            <div style="max-height:140px; overflow-y:auto;">
-              <table class="table table-sm table-bordered mb-0">
-                <thead class="table-light sticky-top">
-                  <tr><th>#</th><th>Valor</th><th>Token</th></tr>
-                </thead>
-                <tbody>
-                  <tr *ngFor="let t of tokensLexer; let i = index">
-                    <td>{{ i+1 }}</td>
-                    <td><code>{{ t.valor }}</code></td>
-                    <td><span class="badge bg-primary" style="font-size:10px;">{{ t.nombre }}</span></td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
+          <small class="field__hint">
+            <span *ngIf="modoTexto">El lexer convierte el texto en tokens automáticamente.</span>
+            <span *ngIf="!modoTexto">Escribe los nombres de tokens separados por espacios.</span>
+          </small>
+        </div>
+
+        <!-- Botón analizar -->
+        <button class="btn-analizar" (click)="analizar()" [disabled]="!analizadorSeleccionado || !cadenaEntrada.trim()">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+            <path d="M2 7h10M7.5 3l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
+              stroke-linejoin="round" />
+          </svg>
+          Analizar
+        </button>
+
+        <!-- Resultado -->
+        <div class="result-badge result-badge--ok" *ngIf="resultado?.aceptada">
+          <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+            <circle cx="6.5" cy="6.5" r="5.5" fill="currentColor" opacity=".15" />
+            <path d="M3.5 6.5l2 2 4-4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"
+              stroke-linejoin="round" />
+          </svg>
+          Cadena aceptada
+        </div>
+        <div class="result-badge result-badge--err" *ngIf="resultado !== null && !resultado.aceptada">
+          <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+            <circle cx="6.5" cy="6.5" r="5.5" fill="currentColor" opacity=".15" />
+            <path d="M4.5 4.5l4 4M8.5 4.5l-4 4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />
+          </svg>
+          Cadena rechazada
+        </div>
+
+        <!-- Tokens del lexer -->
+        <div *ngIf="modoTexto && tokensLexer.length > 0" class="tokens-table-wrap">
+          <p class="tokens-table-title">Tokens reconocidos</p>
+          <div class="tokens-table-scroll">
+            <table class="tokens-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Valor</th>
+                  <th>Token</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let t of tokensLexer; let i = index">
+                  <td class="tokens-table__num">{{ i + 1 }}</td>
+                  <td><code>{{ t.valor }}</code></td>
+                  <td><span class="tk-badge">{{ t.nombre }}</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div><!-- /panel--left -->
+
+      <!-- ╔═══════════════════════════════╗
+           ║ PANEL DERECHO — árbol/errores ║
+           ╚═══════════════════════════════╝ -->
+      <div class="panel-right">
+
+        <!-- Árbol -->
+        <div class="panel panel--tree">
+          <div class="panel__header">Árbol de derivación</div>
+          <div class="panel__body--tree">
+            <app-arbol [raiz]="arbol"></app-arbol>
+          </div>
+        </div>
+
+        <!-- Éxito sin errores -->
+        <div class="panel panel--success" *ngIf="resultado?.aceptada">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <circle cx="8" cy="8" r="7" fill="#d1fae5" />
+            <path d="M4.5 8l2.5 2.5 5-5" stroke="#065f46" stroke-width="1.5" stroke-linecap="round"
+              stroke-linejoin="round" />
+          </svg>
+          No se encontraron errores — cadena aceptada correctamente
+        </div>
+
+        <!-- Reporte de errores -->
+        <div class="panel panel--errors" *ngIf="erroresLL.length > 0">
+          <div class="panel__header panel__header--err">
+            Reporte de errores ({{ erroresLL.length }})
+          </div>
+
+          <div class="err-summary">
+            <span class="err-pill err-pill--lex">Léxicos: {{ erroresLexicos.length }}</span>
+            <span class="err-pill err-pill--sin">Sintácticos: {{ erroresSintacticos.length }}</span>
+            <span class="err-pill err-pill--sem">Semánticos: {{ erroresSemanticos.length }}</span>
+          </div>
+
+          <div class="err-table-scroll">
+            <table class="err-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Tipo</th>
+                  <th>Token</th>
+                  <th>Pos.</th>
+                  <th>Descripción</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let e of erroresLL; let i = index" [class.err-row--lex]="e.tipo === 'LEXICO'"
+                  [class.err-row--sin]="e.tipo === 'SINTACTICO'" [class.err-row--sem]="e.tipo === 'SEMANTICO'">
+                  <td>{{ i + 1 }}</td>
+                  <td>
+                    <span class="err-type" [class.err-type--lex]="e.tipo === 'LEXICO'"
+                      [class.err-type--sin]="e.tipo === 'SINTACTICO'" [class.err-type--sem]="e.tipo === 'SEMANTICO'">
+                      {{ e.tipo }}
+                    </span>
+                  </td>
+                  <td><code>{{ e.token || '—' }}</code></td>
+                  <td class="err-pos">{{ e.posicion }}</td>
+                  <td class="err-msg">{{ e.mensaje }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="err-legend">
+            <span class="err-type err-type--lex">LEXICO</span> Token no reconocido &nbsp;·&nbsp;
+            <span class="err-type err-type--sin">SINTACTICO</span> Producción no encontrada &nbsp;·&nbsp;
+            <span class="err-type err-type--sem">SEMANTICO</span> Símbolo no declarado
           </div>
 
         </div>
-      </div>
-    </div>
 
-    <!-- Panel derecho -->
-    <div class="col-md-8 d-flex flex-column gap-3">
+      </div><!-- /panel-right -->
 
-      <!-- Árbol -->
-      <div class="card shadow-sm">
-        <div class="card-header bg-success text-white fw-semibold">
-          Árbol de derivación
-        </div>
-        <div class="card-body p-2" style="overflow:auto; background:#f8f9fa; min-height:300px;">
-          <app-arbol [raiz]="arbol"></app-arbol>
-        </div>
-      </div>
-
-      <!-- Reporte de errores -->
-      <div class="card shadow-sm" *ngIf="erroresLL.length > 0">
-        <div class="card-header text-white fw-semibold" style="background:#b02a37;">
-          Reporte de errores ({{ erroresLL.length }})
-        </div>
-        <div class="card-body pb-1 pt-2">
-          <div class="d-flex gap-2 flex-wrap mb-2">
-            <span class="badge fs-6 px-3 py-2" style="background:#dc3545;">
-              Léxicos: {{ erroresLexicos.length }}
-            </span>
-            <span class="badge fs-6 px-3 py-2" style="background:#fd7e14;">
-              Sintácticos: {{ erroresSintacticos.length }}
-            </span>
-            <span class="badge fs-6 px-3 py-2" style="background:#6f42c1;">
-              Semánticos: {{ erroresSemanticos.length }}
-            </span>
-          </div>
-        </div>
-        <div style="max-height:260px; overflow-y:auto;">
-          <table class="table table-sm mb-0">
-            <thead class="sticky-top" style="background:#f8d7da;">
-              <tr>
-                <th>#</th><th>Tipo</th><th>Token</th><th>Pos.</th><th>Descripción</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr *ngFor="let e of erroresLL; let i = index"
-                [style.background]="e.tipo === 'LEXICO'     ? '#fff3cd' :
-                                    e.tipo === 'SINTACTICO'  ? '#f8d7da' :
-                                    e.tipo === 'SEMANTICO'   ? '#e8d5f5' : ''">
-                <td>{{ i+1 }}</td>
-                <td>
-                  <span class="badge"
-                    [style.background]="e.tipo === 'LEXICO'     ? '#ffc107' :
-                                        e.tipo === 'SINTACTICO'  ? '#dc3545' :
-                                        e.tipo === 'SEMANTICO'   ? '#6f42c1' : '#6c757d'"
-                    [style.color]="e.tipo === 'LEXICO' ? '#000' : '#fff'">
-                    {{ e.tipo }}
-                  </span>
-                </td>
-                <td><code>{{ e.token || '—' }}</code></td>
-                <td class="text-center">{{ e.posicion }}</td>
-                <td class="small">{{ e.mensaje }}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        <div class="card-footer d-flex gap-3 small flex-wrap py-2">
-          <span>
-            <span class="badge" style="background:#ffc107;color:#000;">LEXICO</span>
-            Token no reconocido
-          </span>
-          <span>
-            <span class="badge bg-danger">SINTACTICO</span>
-            Producción no encontrada o token inesperado
-          </span>
-          <span>
-            <span class="badge" style="background:#6f42c1;">SEMANTICO</span>
-            Símbolo no declarado
-          </span>
-        </div>
-      </div>
-
-      <!-- Sin errores -->
-      <div class="card shadow-sm" *ngIf="resultado?.aceptada">
-        <div class="card-body text-success fw-semibold text-center py-2">
-          No se encontraron errores: cadena aceptada correctamente
-        </div>
-      </div>
-
-    </div>
-  </div>
-</div>
+    </div><!-- /body-grid -->
+  </div><!-- /main-content -->
+</div><!-- /analizador-shell -->
